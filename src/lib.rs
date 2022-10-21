@@ -293,7 +293,7 @@ impl Index {
         IndexBuilder::with_language(lang).add_fields(fields).build()
     }
 
-    /// Add the data from a document to the index.
+    /// Index a document.
     ///
     /// *NOTE: The elements of `data` should be provided in the same order as
     /// the fields used to create the index.*
@@ -302,9 +302,9 @@ impl Index {
     /// ```
     /// # use elasticlunr::Index;
     /// let mut index = Index::new(&["title", "body"]);
-    /// index.add_doc("1", &["this is a title", "this is body text"]);
+    /// let doc = index.index_doc("1", &["this is a title", "this is body text"]);
     /// ```
-    pub fn add_doc<I>(&mut self, doc_ref: &str, data: I)
+    pub fn index_doc<I>(&mut self, doc_ref: &str, data: I) -> BTreeMap<String, String>
     where
         I: IntoIterator,
         I::Item: AsRef<str>,
@@ -347,6 +347,40 @@ impl Index {
             }
         }
 
+        doc
+    }
+
+    /// Add & index the data from a document to the document store.
+    ///
+    /// *NOTE: The elements of `data` should be provided in the same order as
+    /// the fields used to create the index.*
+    ///
+    /// # Example
+    /// ```
+    /// # use elasticlunr::Index;
+    /// let mut index = Index::new(&["title", "body"]);
+    /// index.add_doc("1", &["this is a title", "this is body text"]);
+    /// ```
+    pub fn add_doc<I>(&mut self, doc_ref: &str, data: I)
+    where
+        I: IntoIterator,
+        I::Item: AsRef<str>,
+    {
+        let doc = self.index_doc(doc_ref, data);
+        self.add_indexed_doc(doc_ref, doc);
+    }
+
+    /// Add an pre-indexed document to the document store.
+    ///
+    /// # Example
+    /// ```
+    /// # use elasticlunr::Index;
+    /// let mut index = Index::new(&["title", "body"]);
+    /// let doc = index.index_doc("1", &["this is a title", "this is body text"]);
+    /// index.add_indexed_doc("1", doc);
+    /// ```
+    pub fn add_indexed_doc(&mut self, doc_ref: &str, doc: BTreeMap<String, String>)
+    {
         self.document_store.add_doc(doc_ref, doc);
     }
 
