@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let mut index = Index::new(&["title", "body"]);
+    let mut index = Index::new(&["title", "body"], None);
     index.add_doc(
         "1",
         &[

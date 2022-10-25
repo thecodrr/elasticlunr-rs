@@ -19,7 +19,7 @@
 //! use std::io::Write;
 //! use elasticlunr::Index;
 //!
-//! let mut index = Index::new(&["title", "body"]);
+//! let mut index = Index::new(&["title", "body"], None);
 //! index.add_doc("1", &["This is a title", "This is body text!"]);
 //! // Add more docs...
 //! let mut file = File::create("out.json").unwrap();
@@ -67,6 +67,7 @@ type Tokenizer = Option<Box<dyn Fn(&str) -> Vec<String>>>;
 pub struct IndexBuilder {
     save: bool,
     fields: Vec<String>,
+    ignored_fields: Vec<String>,
     field_tokenizers: Vec<Tokenizer>,
     ref_field: String,
     pipeline: Option<Pipeline>,
@@ -78,6 +79,7 @@ impl Default for IndexBuilder {
         IndexBuilder {
             save: true,
             fields: Vec::new(),
+            ignored_fields: Vec::new(),
             field_tokenizers: Vec::new(),
             ref_field: "id".into(),
             pipeline: None,
@@ -119,6 +121,20 @@ impl IndexBuilder {
         self
     }
 
+    /// Add a document field to the `Index`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a field with the name already exists.
+    pub fn add_ignored_field(mut self, field: &str) -> Self {
+        let field = field.into();
+        if self.ignored_fields.contains(&field) {
+            panic!("Duplicate ignored fields in index: {}", field);
+        }
+        self.ignored_fields.push(field);
+        self
+    }
+
     /// Add a document field to the `Index`, with a custom tokenizer for that field.
     ///
     /// # Panics
@@ -154,6 +170,22 @@ impl IndexBuilder {
         self
     }
 
+    /// Add the document fields to the `Index`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if two fields have the same name.
+    pub fn add_ignored_fields<I>(mut self, fields: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: AsRef<str>,
+    {
+        for field in fields {
+            self = self.add_ignored_field(field.as_ref())
+        }
+        self
+    }
+
     /// Set the key used to store the document reference field.
     pub fn set_ref(mut self, ref_field: &str) -> Self {
         self.ref_field = ref_field.into();
@@ -169,6 +201,7 @@ impl IndexBuilder {
             ref_field,
             pipeline,
             language,
+            ignored_fields,
         } = self;
 
         let index = fields
@@ -181,6 +214,7 @@ impl IndexBuilder {
         Index {
             index,
             fields,
+            ignored_fields,
             field_tokenizers,
             ref_field,
             document_store: DocumentStore::new(save),
@@ -196,6 +230,8 @@ impl IndexBuilder {
 #[serde(rename_all = "camelCase")]
 pub struct Index {
     fields: Vec<String>,
+    #[serde(skip)]
+    ignored_fields: Vec<String>,
     #[serde(skip)]
     field_tokenizers: Vec<Tokenizer>,
     pipeline: Pipeline,
@@ -256,19 +292,26 @@ impl Index {
     ///
     /// ```
     /// # use elasticlunr::{Index};
-    /// let mut index = Index::new(&["title", "body"]);
+    /// let mut index = Index::new(&["title", "body"], None);
     /// index.add_doc("1", &["this is a title", "this is body text"]);
     /// ```
     ///
     /// # Panics
     ///
     /// Panics if a field with the name already exists.
-    pub fn new<I>(fields: I) -> Self
+    pub fn new<I>(fields: I, ignored_fields: Option<Vec<&str>>) -> Self
     where
         I: IntoIterator,
-        I::Item: AsRef<str>,
+        I::Item: AsRef<str>
     {
-        IndexBuilder::new().add_fields(fields).build()
+        let mut builder = IndexBuilder::new();
+        builder = builder.add_fields(fields);
+
+        if let Some(ignored_fields) = ignored_fields {
+            builder = builder.add_ignored_fields(ignored_fields);
+        }
+
+        builder.build()
     }
 
     /// Create a new index with the provided fields for the given
@@ -301,7 +344,7 @@ impl Index {
     /// # Example
     /// ```
     /// # use elasticlunr::Index;
-    /// let mut index = Index::new(&["title", "body"]);
+    /// let mut index = Index::new(&["title", "body"], None);
     /// index.add_doc("1", &["this is a title", "this is body text"]);
     /// ```
     pub fn add_doc<I>(&mut self, doc_ref: &str, data: I)
@@ -316,7 +359,10 @@ impl Index {
         for (i, value) in data.into_iter().enumerate() {
             let field = &self.fields[i];
             let tokenizer = self.field_tokenizers[i].as_ref();
-            doc.insert(field.clone(), value.as_ref().to_string());
+            let is_ignored = self.ignored_fields.contains(field);
+            if !is_ignored {
+                doc.insert(field.clone(), value.as_ref().to_string());
+            }
 
             if field == &self.ref_field {
                 continue;
@@ -383,7 +429,7 @@ mod tests {
 
     #[test]
     fn adding_document_to_index() {
-        let mut idx = Index::new(&["body"]);
+        let mut idx = Index::new(&["body"], None);
         idx.add_doc("1", &["this is a test"]);
 
         assert_eq!(idx.document_store.len(), 1);
@@ -398,7 +444,7 @@ mod tests {
 
     #[test]
     fn adding_document_with_empty_field() {
-        let mut idx = Index::new(&["title", "body"]);
+        let mut idx = Index::new(&["title", "body"], None);
 
         idx.add_doc("1", &["", "test"]);
         assert_eq!(idx.index["body"].get_doc_frequency("test"), 1);
@@ -408,6 +454,6 @@ mod tests {
     #[test]
     #[should_panic]
     fn creating_index_with_identical_fields_panics() {
-        let _idx = Index::new(&["title", "body", "title"]);
+        let _idx = Index::new(&["title", "body", "title"], None);
     }
 }
