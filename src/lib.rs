@@ -52,6 +52,22 @@ pub use pipeline::Pipeline;
 
 type Tokenizer = Option<Box<dyn Fn(&str) -> Vec<String>>>;
 
+#[macro_export]
+macro_rules! ahashmap {
+    // trailing comma case
+    ($($key:expr => $value:expr,)+) => (ahashmap!($($key => $value),+));
+
+    ( $($key:expr => $value:expr),* ) => {
+        {
+            let mut _map = hashbrown::HashMap::new();
+            $(
+                let _ = _map.insert($key, $value);
+            )*
+            _map
+        }
+    };
+}
+
 /// A builder for an `Index` with custom parameters.
 ///
 /// # Example
@@ -238,7 +254,7 @@ pub struct Index {
     #[serde(rename = "ref")]
     ref_field: String,
     version: &'static str,
-    index: BTreeMap<String, InvertedIndex>,
+    index: hashbrown::HashMap<String, InvertedIndex>,
     document_store: DocumentStore,
     #[serde(with = "ser_lang")]
     lang: Box<dyn Language>,
@@ -352,9 +368,9 @@ impl Index {
         I: IntoIterator,
         I::Item: AsRef<str>,
     {
-        let mut doc = BTreeMap::new();
+        let mut doc = hashbrown::HashMap::new();
         doc.insert(self.ref_field.clone(), doc_ref.into());
-        let mut token_freq = BTreeMap::new();
+        let mut token_freq = hashbrown::HashMap::new();
 
         for (i, value) in data.into_iter().enumerate() {
             let field = &self.fields[i];
@@ -435,7 +451,7 @@ mod tests {
         assert_eq!(idx.document_store.len(), 1);
         assert_eq!(
             idx.document_store.get_doc("1").unwrap(),
-            btreemap! {
+            ahashmap! {
                 "id".into() => "1".into(),
                 "body".into() => "this is a test".into(),
             }

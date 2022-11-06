@@ -10,11 +10,11 @@ struct TermFrequency {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 struct IndexItem {
-    pub docs: BTreeMap<String, TermFrequency>,
+    pub docs: hashbrown::HashMap<String, TermFrequency>,
     #[serde(rename = "df")]
     pub doc_freq: i64,
     #[serde(flatten, serialize_with = "IndexItem::serialize")]
-    pub children: BTreeMap<char, IndexItem>,
+    pub children: hashbrown::HashMap<char, IndexItem>,
 }
 
 impl IndexItem {
@@ -22,7 +22,7 @@ impl IndexItem {
         Default::default()
     }
 
-    fn serialize<S>(map: &BTreeMap<char, IndexItem>, ser: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(map: &hashbrown::HashMap<char, IndexItem>, ser: S) -> Result<S::Ok, S::Error>
     where
         S: ::serde::Serializer,
     {
@@ -109,7 +109,7 @@ impl InvertedIndex {
         self.root.remove_token(doc_ref, token)
     }
 
-    pub fn get_docs(&self, token: &str) -> Option<BTreeMap<String, f64>> {
+    pub fn get_docs(&self, token: &str) -> Option<hashbrown::HashMap<String, f64>> {
         self.root.get_node(token).map(|node| {
             node.docs
                 .iter()
@@ -132,6 +132,8 @@ impl InvertedIndex {
 
 #[cfg(test)]
 mod tests {
+    use crate::ahashmap;
+
     use super::*;
 
     #[test]
@@ -226,19 +228,19 @@ mod tests {
         inverted_index.add_token("123", token, 1.);
         assert_eq!(
             inverted_index.get_docs(token).unwrap(),
-            btreemap! {
+            ahashmap! {
                 "123".into() => 1.
             }
         );
 
-        assert_eq!(inverted_index.get_docs(""), Some(BTreeMap::new()));
+        assert_eq!(inverted_index.get_docs(""), Some(hashbrown::HashMap::new()));
 
         inverted_index.add_token("234", "boo", 100.);
         inverted_index.add_token("345", "too", 101.);
 
         assert_eq!(
             inverted_index.get_docs(token).unwrap(),
-            btreemap! {
+            ahashmap! {
                 "123".into() => 1.
             }
         );
@@ -248,7 +250,7 @@ mod tests {
 
         assert_eq!(
             inverted_index.get_docs(token).unwrap(),
-            btreemap! {
+            ahashmap! {
                 "123".into() => 1.,
                 "234".into() => 100.,
                 "345".into() => 101.,
@@ -289,13 +291,13 @@ mod tests {
         inverted_index.add_token("123", "foo", 1.);
         assert_eq!(
             inverted_index.get_docs("foo").unwrap(),
-            btreemap! {
+            ahashmap! {
                 "123".into() => 1.,
             }
         );
 
         inverted_index.remove_token("123", "foo");
-        assert_eq!(inverted_index.get_docs("foo"), Some(BTreeMap::new()));
+        assert_eq!(inverted_index.get_docs("foo"), Some(hashbrown::HashMap::new()));
         assert_eq!(inverted_index.get_doc_frequency("foo"), 0);
         assert_eq!(inverted_index.has_token("foo"), true);
     }
@@ -310,7 +312,7 @@ mod tests {
 
         assert_eq!(
             inverted_index.get_docs("foo").unwrap(),
-            btreemap! {
+            ahashmap! {
                 "123".into() => 1.
             }
         );
