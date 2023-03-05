@@ -59,7 +59,7 @@ macro_rules! ahashmap {
 
     ( $($key:expr => $value:expr),* ) => {
         {
-            let mut _map = hashbrown::HashMap::new();
+            let mut _map = std::collections::HashMap::new();
             $(
                 let _ = _map.insert($key, $value);
             )*
@@ -254,7 +254,7 @@ pub struct Index {
     #[serde(rename = "ref")]
     ref_field: String,
     version: &'static str,
-    index: hashbrown::HashMap<String, InvertedIndex>,
+    index: std::collections::HashMap<String, InvertedIndex>,
     document_store: DocumentStore,
     #[serde(with = "ser_lang")]
     lang: Box<dyn Language>,
@@ -368,9 +368,9 @@ impl Index {
         I: IntoIterator,
         I::Item: AsRef<str>,
     {
-        let mut doc = hashbrown::HashMap::new();
+        let mut doc = std::collections::HashMap::new();
         doc.insert(self.ref_field.clone(), doc_ref.into());
-        let mut token_freq = hashbrown::HashMap::new();
+        let mut token_freq = std::collections::HashMap::new();
 
         for (i, value) in data.into_iter().enumerate() {
             let field = &self.fields[i];

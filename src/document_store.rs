@@ -6,8 +6,8 @@
 #[serde(rename_all = "camelCase")]
 pub struct DocumentStore {
     pub save: bool,
-    pub docs: hashbrown::HashMap<String, hashbrown::HashMap<String, String>>,
-    pub doc_info: hashbrown::HashMap<String, hashbrown::HashMap<String, usize>>,
+    pub docs: std::collections::HashMap<String, std::collections::HashMap<String, String>>,
+    pub doc_info: std::collections::HashMap<String, std::collections::HashMap<String, usize>>,
     // Redundant with docs.len(), but needed for serialization
     pub length: usize,
 }
@@ -16,8 +16,8 @@ impl DocumentStore {
     pub fn new(save: bool) -> Self {
         DocumentStore {
             save,
-            docs: hashbrown::HashMap::new(),
-            doc_info: hashbrown::HashMap::new(),
+            docs: std::collections::HashMap::new(),
+            doc_info: std::collections::HashMap::new(),
             length: 0,
         }
     }
@@ -38,18 +38,18 @@ impl DocumentStore {
         self.docs.contains_key(doc_ref)
     }
 
-    pub fn add_doc(&mut self, doc_ref: &str, doc: hashbrown::HashMap<String, String>) {
+    pub fn add_doc(&mut self, doc_ref: &str, doc: std::collections::HashMap<String, String>) {
         if !self.has_doc(doc_ref) {
             self.length += 1;
         }
 
         self.docs.insert(
             doc_ref.into(),
-            if self.save { doc } else { hashbrown::HashMap::new() },
+            if self.save { doc } else { std::collections::HashMap::new() },
         );
     }
 
-    pub fn get_doc(&self, doc_ref: &str) -> Option<hashbrown::HashMap<String, String>> {
+    pub fn get_doc(&self, doc_ref: &str) -> Option<std::collections::HashMap<String, String>> {
         self.docs.get(doc_ref).cloned()
     }
 
@@ -64,7 +64,7 @@ impl DocumentStore {
     pub fn add_field_length(&mut self, doc_ref: &str, field: &str, length: usize) {
         self.doc_info
             .entry(doc_ref.into())
-            .or_insert_with(hashbrown::HashMap::new)
+            .or_insert_with(std::collections::HashMap::new)
             .insert(field.into(), length);
     }
 
@@ -142,8 +142,8 @@ mod tests {
         store.add_doc("2", doc2);
         assert_eq!(store.len(), 2);
         assert_eq!(store.is_stored(), false);
-        assert_eq!(store.get_doc("1").unwrap(), hashbrown::HashMap::new());
-        assert_eq!(store.get_doc("2").unwrap(), hashbrown::HashMap::new());
+        assert_eq!(store.get_doc("1").unwrap(), std::collections::HashMap::new());
+        assert_eq!(store.get_doc("2").unwrap(), std::collections::HashMap::new());
     }
 
     #[test]
@@ -157,7 +157,7 @@ mod tests {
         assert_eq!(store.len(), 2);
         assert_eq!(store.is_stored(), false);
         assert_eq!(store.get_doc("6"), None);
-        assert_eq!(store.get_doc("2").unwrap(), hashbrown::HashMap::new());
+        assert_eq!(store.get_doc("2").unwrap(), std::collections::HashMap::new());
     }
 
     #[test]
@@ -171,7 +171,7 @@ mod tests {
         store.remove_doc("1");
         assert_eq!(store.len(), 1);
         assert_eq!(store.is_stored(), false);
-        assert_eq!(store.get_doc("2").unwrap(), hashbrown::HashMap::new());
+        assert_eq!(store.get_doc("2").unwrap(), std::collections::HashMap::new());
         assert_eq!(store.get_doc("1"), None);
     }
 
@@ -186,8 +186,8 @@ mod tests {
         store.remove_doc("8");
         assert_eq!(store.len(), 2);
         assert_eq!(store.is_stored(), false);
-        assert_eq!(store.get_doc("2").unwrap(), hashbrown::HashMap::new());
-        assert_eq!(store.get_doc("1").unwrap(), hashbrown::HashMap::new());
+        assert_eq!(store.get_doc("2").unwrap(), std::collections::HashMap::new());
+        assert_eq!(store.get_doc("1").unwrap(), std::collections::HashMap::new());
     }
 
     #[test]

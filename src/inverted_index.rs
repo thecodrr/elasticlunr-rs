@@ -10,11 +10,11 @@ struct TermFrequency {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 struct IndexItem {
-    pub docs: hashbrown::HashMap<String, TermFrequency>,
+    pub docs: std::collections::HashMap<String, TermFrequency>,
     #[serde(rename = "df")]
     pub doc_freq: i64,
     #[serde(flatten, serialize_with = "IndexItem::serialize")]
-    pub children: hashbrown::HashMap<char, IndexItem>,
+    pub children: std::collections::HashMap<char, IndexItem>,
 }
 
 impl IndexItem {
@@ -22,7 +22,7 @@ impl IndexItem {
         Default::default()
     }
 
-    fn serialize<S>(map: &hashbrown::HashMap<char, IndexItem>, ser: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(map: &std::collections::HashMap<char, IndexItem>, ser: S) -> Result<S::Ok, S::Error>
     where
         S: ::serde::Serializer,
     {
@@ -109,7 +109,7 @@ impl InvertedIndex {
         self.root.remove_token(doc_ref, token)
     }
 
-    pub fn get_docs(&self, token: &str) -> Option<hashbrown::HashMap<String, f64>> {
+    pub fn get_docs(&self, token: &str) -> Option<std::collections::HashMap<String, f64>> {
         self.root.get_node(token).map(|node| {
             node.docs
                 .iter()
@@ -233,7 +233,7 @@ mod tests {
             }
         );
 
-        assert_eq!(inverted_index.get_docs(""), Some(hashbrown::HashMap::new()));
+        assert_eq!(inverted_index.get_docs(""), Some(std::collections::HashMap::new()));
 
         inverted_index.add_token("234", "boo", 100.);
         inverted_index.add_token("345", "too", 101.);
@@ -297,7 +297,7 @@ mod tests {
         );
 
         inverted_index.remove_token("123", "foo");
-        assert_eq!(inverted_index.get_docs("foo"), Some(hashbrown::HashMap::new()));
+        assert_eq!(inverted_index.get_docs("foo"), Some(std::collections::HashMap::new()));
         assert_eq!(inverted_index.get_doc_frequency("foo"), 0);
         assert_eq!(inverted_index.has_token("foo"), true);
     }
